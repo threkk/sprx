@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"github.com/threkk/sprx/util"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"net"
-	"net/http"
 	"regexp"
 	"time"
 )
 
-const linkRegex = regexp.MustCompile(`([^:\s]+:\d*)\s*>\s*:(\d*)`)
+// LinkRegex Regular expression to detect if a string has the tunnel format.
+var LinkRegex = regexp.MustCompile(`([^:\s]+:\d*)\s*>\s*:(\d*)`)
 
 // Tunnel Models the a tunnel between the local machine and the client we are
 // connecting.
@@ -22,12 +21,15 @@ type Tunnel struct {
 	Dst string
 }
 
+// ParseTunnel Creates a new Tunnel based on a configuration string. The
+// configuration string has the following format:
+//		remoteHost:remotePort > localPort
 func ParseTunnel(str string) *Tunnel {
-	if !linkRegex.Match(str) {
+	if !LinkRegex.Match([]byte(str)) {
 		return nil
 	}
 
-	matches := linkRegex.FindStringSubmatch(str)
+	matches := LinkRegex.FindStringSubmatch(str)
 	src := matches[1]
 	dst := fmt.Sprintf("localhost:%s", matches[2])
 
@@ -35,6 +37,7 @@ func ParseTunnel(str string) *Tunnel {
 	return tunnel
 }
 
+// NewTunnel Cretes a new Tunnel.
 func NewTunnel(dst, src string) *Tunnel {
 	tunnel := &Tunnel{Src: src, Dst: dst}
 	return tunnel
