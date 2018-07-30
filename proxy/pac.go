@@ -6,6 +6,7 @@ import (
 )
 
 // Simple PAC configuration which will route all the traffic through the proxy.
+// Reference: https://en.wikipedia.org/wiki/Proxy_auto-config
 const pacTpl = `
 function FindProxyForURL(url, host) {
 	return "PROXY 127.0.0.1:%s; DIRECT";
