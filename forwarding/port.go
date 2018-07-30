@@ -2,6 +2,7 @@
 package forwarding
 
 import (
+	"errors"
 	"fmt"
 	"github.com/threkk/sprx/util"
 	"golang.org/x/crypto/ssh"
@@ -68,4 +69,23 @@ func (t *Tunnel) Connect(client *ssh.Client) {
 
 	go util.Transfer(res, target)
 	go util.Transfer(target, res)
+}
+
+// Tunnels Slice of tunnels used to parse the flags.
+type Tunnels []Tunnel
+
+// String Necessary to implement the Flag interface.
+func (ts *Tunnels) String() string {
+	return fmt.Sprint(*ts)
+}
+
+// Set Parses the value of the flag and stores the Tunnel in the array. It can
+// be used several times and the value accumulate.
+func (ts *Tunnels) Set(value string) error {
+	tunnel := ParseTunnel(value)
+	if tunnel != nil {
+		*ts = append(*ts, *tunnel)
+		return nil
+	}
+	return errors.New("Tunnel parse error: " + value)
 }
