@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	fw "github.com/threkk/sprx/forwarding"
@@ -9,7 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 var port int
@@ -80,7 +83,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	pacListener, err := net.Listen("tcp", "localhost:"+port)
+	pacListener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "PAC listener could not be started: %s\n", err.Error())
 		os.Exit(1)
@@ -88,19 +91,33 @@ func main() {
 
 	// Get the ports.
 	// TODO: This is something like 127.0.0.1:88282. We need to grab the LAST :n
-	proxyPort := proxyListener.Addr()
-	pacPort := pacListener.Addr()
+	proxyPort, err := fw.ExtractPort(proxyListener.Addr())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid port: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	pacPort, err := fw.ExtractPort(pacListener.Addr())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid port: %s\n", err.Error())
+		os.Exit(1)
+	}
 
 	// Init the proxy server.
 	proxyServer := proxy.NewProxy()
 
 	// Use the proxy port to start the PAC handler and the PAC server.
-	pacHandler := proxy.NewPacHandler(proxyPort)
+	pacHandler := proxy.NewPacHandler(string(proxyPort))
+	pacServer := http.Server{
+		Handler: pacHandler,
+	}
 
 	// Start all the tunnels.
 	// Redirect the local port into the local port in the client.
-	proxyTunnel := fw.NewTunnel("localhost:"+proxyPort, "localhost:"+proxyPort)
-	pacTunnel := fw.NewTunnel("localhost:"+pacPort, "localhost:"+pacPort)
+	proxyHost := fmt.Sprintf("localhost:%d", proxyPort)
+	pacHost := fmt.Sprintf("localhost:%d", pacPort)
+	proxyTunnel := fw.NewTunnel(proxyHost, proxyHost)
+	pacTunnel := fw.NewTunnel(pacHost, pacHost)
 
 	proxyTunnel.Connect(ssh)
 	pacTunnel.Connect(ssh)
@@ -108,9 +125,24 @@ func main() {
 		t.Connect(ssh)
 	}
 
-	// TODO: Check miniflux about how to start the daemon.
-	// Start proxy server: proxyServer.Serve(proxyListener)
-	// Start PAC server: http.Serve(pacListener, pacHandler)
+	// Start the daemon.
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop, syscall.SIGTERM)
+
+	// TODO: Timeouts https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	// Start proxy server
+	go proxyServer.Serve(proxyListener)
+	// Start PAC server
+	go pacServer.Serve(pacListener)
+
+	// Wait for the signal to stop.
+	<-stop
+
+	ssh.Close()
+	proxyServer.Shutdown(context.Background())
+	pacServer.Shutdown(context.Background())
+	os.Exit(0)
 
 	// log.Fatal(server.Serve(listener))
 	// Format: sprx -p 5200 -link "some.corporate.web:22 > :8022" -l "localhost:8080 > :8080" alberto@myip.local

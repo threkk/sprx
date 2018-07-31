@@ -15,9 +15,9 @@ function FindProxyForURL(url, host) {
 
 // NewPacHandler Creates a new PAC handler which redirect all the traffic to the
 // given port.
-func NewPacHandler(port string) func(http.ResponseWriter, http.Request) {
+func NewPacHandler(port string) http.HandlerFunc {
 	pac := fmt.Sprintf(pacTpl, port)
-	return func(res http.ResponseWriter, req http.Request) {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(res, pac)
-	}
+	})
 }
