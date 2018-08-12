@@ -1,9 +1,8 @@
 package forwarding
 
 import (
-	"log"
-	//	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/crypto/ssh"
+	"log"
 )
 
 // Connect Connects to a host using SSH.
@@ -13,6 +12,7 @@ func Connect(user, host, password string) *ssh.Client {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	client, err := ssh.Dial("tcp", host, sshConfig)

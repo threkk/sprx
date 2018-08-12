@@ -9,8 +9,6 @@ import (
 	"log"
 	"net"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -34,7 +32,7 @@ func ParseTunnel(str string) *Tunnel {
 
 	matches := LinkRegex.FindStringSubmatch(str)
 	src := matches[1]
-	dst := fmt.Sprintf("localhost:%s", matches[2])
+	dst := net.JoinHostPort("localhost", matches[2])
 
 	tunnel := &Tunnel{Src: src, Dst: dst}
 	return tunnel
@@ -90,12 +88,4 @@ func (ts *Tunnels) Set(value string) error {
 		return nil
 	}
 	return errors.New("Tunnel parse error: " + value)
-}
-
-// ExtractPort Given an addres, it extracts the port from it.
-func ExtractPort(addr net.Addr) (uint64, error) {
-	str := addr.String()
-	split := strings.Split(str, ":")
-	lastValue := split[len(split)-1]
-	return strconv.ParseUint(lastValue, 10, 32)
 }
