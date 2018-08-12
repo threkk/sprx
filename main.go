@@ -90,14 +90,13 @@ func main() {
 	}
 
 	// Get the ports.
-	// TODO: This is something like 127.0.0.1:88282. We need to grab the LAST :n
-	proxyPort, err := fw.ExtractPort(proxyListener.Addr())
+	_, proxyPort, err := net.SplitHostPort(proxyListener.Addr().String())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid port: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	pacPort, err := fw.ExtractPort(pacListener.Addr())
+	_, pacPort, err := net.SplitHostPort(pacListener.Addr().String())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid port: %s\n", err.Error())
 		os.Exit(1)
@@ -114,8 +113,8 @@ func main() {
 
 	// Start all the tunnels.
 	// Redirect the local port into the local port in the client.
-	proxyHost := fmt.Sprintf("localhost:%d", proxyPort)
-	pacHost := fmt.Sprintf("localhost:%d", pacPort)
+	proxyHost := net.JoinHostPort("localhost", proxyPort)
+	pacHost := net.JoinHostPort("localhost", pacPort)
 	proxyTunnel := fw.NewTunnel(proxyHost, proxyHost)
 	pacTunnel := fw.NewTunnel(pacHost, pacHost)
 
