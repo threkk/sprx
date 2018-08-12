@@ -63,6 +63,7 @@ func main() {
 	host := split[1]
 
 	// Ask user for the password.
+	fmt.Printf("Password:")
 	pass, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Password could not be read: %s\n", err.Error())
