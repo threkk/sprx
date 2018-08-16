@@ -69,6 +69,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Password could not be read: %s\n", err.Error())
 		os.Exit(1)
 	}
+	fmt.Printf("\n")
 
 	// Start SSH connection. If there is no connection, nothing can be done.
 	ssh := fw.Connect(user, host, string(pass))
@@ -78,13 +79,13 @@ func main() {
 	}
 
 	// Start the listeners.
-	proxyListener, err := net.Listen("tcp", "localhost:0")
+	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Proxy listener could not be started: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	pacListener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	pacListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "PAC listener could not be started: %s\n", err.Error())
 		os.Exit(1)
@@ -114,15 +115,20 @@ func main() {
 
 	// Start all the tunnels.
 	// Redirect the local port into the local port in the client.
-	proxyHost := net.JoinHostPort("localhost", proxyPort)
-	pacHost := net.JoinHostPort("localhost", pacPort)
+	proxyHost := net.JoinHostPort("127.0.0.1", proxyPort)
+	pacHost := net.JoinHostPort("127.0.0.1", pacPort)
 	proxyTunnel := fw.NewTunnel(proxyHost, proxyHost)
 	pacTunnel := fw.NewTunnel(pacHost, pacHost)
 
 	proxyTunnel.Connect(ssh)
 	pacTunnel.Connect(ssh)
+
+	fmt.Printf("Proxy running on :%s\n", proxyPort)
+	fmt.Printf("PAC running on :%s\n", pacHost)
+
 	for _, t := range tunnelFlag {
 		t.Connect(ssh)
+		fmt.Printf("Redirecting %s into %s\n", t.Src, t.Dst)
 	}
 
 	// Start the daemon.
