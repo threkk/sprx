@@ -32,7 +32,7 @@ func ParseTunnel(str string) *Tunnel {
 
 	matches := LinkRegex.FindStringSubmatch(str)
 	src := matches[1]
-	dst := net.JoinHostPort("localhost", matches[2])
+	dst := net.JoinHostPort("127.0.0.1", matches[2])
 
 	tunnel := &Tunnel{Src: src, Dst: dst}
 	return tunnel
@@ -66,6 +66,9 @@ func (t *Tunnel) Connect(client *ssh.Client) {
 	// If everything goes well, we establish the connection and copy the content
 	// of the target into the listener in the remote host.
 	res, err := listener.Accept()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	go util.Transfer(res, target)
 	go util.Transfer(target, res)
